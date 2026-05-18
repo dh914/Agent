@@ -1,0 +1,81 @@
+name: Hourly Email Routine
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  email-routine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Agent repo
+        uses: actions/checkout@v4
+        with:
+          path: agent
+
+      - name: Checkout Data repo
+        uses: actions/checkout@v4
+        with:
+          repository: dh914/Data
+          path: data
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+        continue-on-error: true
+
+      - name: Checkout System repo
+        uses: actions/checkout@v4
+        with:
+          repository: dh914/System
+          path: system
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+        continue-on-error: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: agent
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run email routine
+        working-directory: agent
+        env:
+          IMAP_HOST: ${{ secrets.IMAP_HOST }}
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASS: ${{ secrets.IMAP_PASS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          AGENT_REPO: dh914/Agent
+          DATA_REPO: dh914/Data
+          SYSTEM_REPO: dh914/System
+          GITHUB_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+        run: python scripts/email_routine.py
+
+      - name: Commit email logs to Agent repo
+        working-directory: agent
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain logs/)" ]; then
+            git add logs/
+            git commit -m "chore(routine): hourly email log $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
+
+      - name: Report run to System repo
+        if: always()
+        working-directory: agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+        run: |
+          python scripts/report_to_system.py --status "${{ job.status }}" --run-id "${{ github.run_id }}" || true
