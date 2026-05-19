@@ -1,0 +1,14 @@
+{
+  "ran_at": "2026-05-19T13:14:05+00:00",
+  "entries": [
+    {
+      "from": "noreply@local.dry-run",
+      "subject": "[dry-run] hourly routine heartbeat",
+      "needs_data": false,
+      "data_issue": null,
+      "replied": false,
+      "drafted_reply": "안녕하세요, 메일 잘 받았습니다 (2026-05-19T13:14:05+00:00).\n\n요청 주신 내용은 자동 루틴이 접수했으며, 1시간 단위 사이클에서 처리됩니다.\n\n처리 결과는 회신 메일과 System 저장소 기록으로 다시 안내드리겠습니다.\n\n감사합니다.",
+      "uid": "dry-run"
+    }
+  ]
+}
