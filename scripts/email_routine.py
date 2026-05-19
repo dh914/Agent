@@ -40,8 +40,20 @@ def fetch_unread_emails() -> list[dict]:
     user = os.environ.get("IMAP_USER")
     password = os.environ.get("IMAP_PASS")
     if not (host and user and password):
-        print("[fetch] IMAP credentials missing; skipping fetch.")
-        return []
+        print("[fetch] IMAP credentials missing; emitting dry-run heartbeat message.")
+        return [
+            {
+                "uid": "dry-run",
+                "from": "noreply@local.dry-run",
+                "subject": "[dry-run] hourly routine heartbeat",
+                "date": _utc_now(),
+                "body": (
+                    "This entry is generated when IMAP credentials are not configured. "
+                    "It proves the hourly cron is firing and the script is executing end-to-end. "
+                    "Configure IMAP_HOST/USER/PASS to replace this with real inbox traffic."
+                ),
+            }
+        ]
 
     messages: list[dict] = []
     with imaplib.IMAP4_SSL(host) as imap:
@@ -89,6 +101,7 @@ def needs_data(message: dict) -> bool:
 def open_data_request(message: dict) -> str | None:
     """Open an issue in the Data repo so a downstream worker fulfills it."""
     if not GITHUB_TOKEN:
+        print("[data] no GITHUB_TOKEN; would have opened a Data repo issue for this message.")
         return None
     payload = json.dumps(
         {
@@ -142,6 +155,9 @@ def send_reply(message: dict, body: str) -> bool:
     host = os.environ.get("SMTP_HOST")
     user = os.environ.get("SMTP_USER")
     password = os.environ.get("SMTP_PASS")
+    if message.get("uid") == "dry-run":
+        print("[reply] dry-run message; recording drafted reply without sending.")
+        return False
     if not (host and user and password and message.get("from")):
         print("[reply] SMTP credentials or recipient missing; skipping send.")
         return False
@@ -185,6 +201,8 @@ def main() -> int:
                 "needs_data": data_url is not None,
                 "data_issue": data_url,
                 "replied": sent,
+                "drafted_reply": body,
+                "uid": msg.get("uid"),
             }
         )
     log_path = record_run(entries)

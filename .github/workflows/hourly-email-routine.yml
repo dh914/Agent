@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hourly-email-routine.yml'
+      - 'scripts/**'
 
 permissions:
   contents: write
@@ -66,10 +71,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Always rebase to avoid races between concurrent hourly runs.
+          git pull --rebase origin main || true
           if [ -n "$(git status --porcelain logs/)" ]; then
             git add logs/
             git commit -m "chore(routine): hourly email log $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            git push
+            for i in 1 2 3 4; do
+              git push && break || sleep $((2 ** i))
+            done
           fi
 
       - name: Report run to System repo
