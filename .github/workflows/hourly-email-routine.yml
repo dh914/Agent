@@ -1,6 +1,8 @@
 name: Hourly Email Routine
 
 on:
+  schedule:
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
