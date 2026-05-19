@@ -22,6 +22,15 @@ from typing import Iterable
 
 import urllib.request
 
+# Load .env when running locally (not in CI where secrets come from env)
+_env_file = Path(__file__).resolve().parent.parent / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _, _v = _line.partition("=")
+            os.environ.setdefault(_k.strip(), _v.strip())
+
 AGENT_ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = AGENT_ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -56,7 +65,8 @@ def fetch_unread_emails() -> list[dict]:
         ]
 
     messages: list[dict] = []
-    with imaplib.IMAP4_SSL(host) as imap:
+    port = int(os.environ.get("IMAP_PORT", "993"))
+    with imaplib.IMAP4_SSL(host, port) as imap:
         imap.login(user, password)
         imap.select("INBOX")
         status, data = imap.search(None, "UNSEEN")
