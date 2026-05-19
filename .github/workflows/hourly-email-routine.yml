@@ -59,6 +59,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
         run: python scripts/email_routine.py
 
+      - name: Relay processed results back to senders
+        working-directory: agent
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          AGENT_REPO: dh914/Agent
+          GITHUB_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+        run: python scripts/relay_results.py
+
       - name: Commit email logs to Agent repo
         working-directory: agent
         run: |
@@ -66,8 +76,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Always rebase to avoid races between concurrent hourly runs.
           git pull --rebase origin main || true
-          if [ -n "$(git status --porcelain logs/)" ]; then
-            git add logs/
+          if [ -n "$(git status --porcelain logs/ incoming/)" ]; then
+            git add logs/ incoming/
             git commit -m "chore(routine): hourly email log $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             for i in 1 2 3 4; do
               git push && break || sleep $((2 ** i))

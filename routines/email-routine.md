@@ -5,10 +5,13 @@
 ## 흐름
 
 1. **메일 확인** — Agent 저장소의 `scripts/email_routine.py` 가 IMAP 으로 미열람 메일을 가져옵니다.
-2. **회신 및 협업 진행**
-   - 본문/제목에 데이터·분석 키워드가 포함되면 **Data 저장소**(`dh914/Data`) 에 `data-request` 이슈를 자동 등록합니다.
-   - 발신인에게 접수/처리 안내 메일을 SMTP 로 회신합니다.
-3. **기록**
+2. **첨부 저장 및 작업 등록**
+   - 첨부 파일은 `incoming/<request_id>/` 에 커밋되어 Data 루틴이 참조할 수 있게 됩니다.
+   - 본문/제목에 데이터·분석 키워드가 포함되거나 첨부가 있으면, **Agent 저장소** 에 `data-request` 라벨의 이슈를 등록합니다 (이슈 본문에 `request_id`/`reply_to`/`attachments` YAML 스펙 포함). Data 루틴은 Agent 저장소에서 이 이슈를 폴링합니다.
+   - 발신인에게 접수 안내 메일을 즉시 회신합니다.
+3. **Data 처리 대기** — Data 루틴이 첨부를 다운로드해 크기·sha256·라인수·미리보기를 산출하고, 이슈를 닫으며 ` ```data-result ` JSON 블록이 포함된 코멘트를 남깁니다.
+4. **결과 회신** — `scripts/relay_results.py` 가 `logs/_pending.json` 의 대기 항목을 돌면서 처리 완료된 이슈의 결과를 추출해, 원 발신인에게 처리 결과 요약 + `data-result.json` 첨부와 함께 회신합니다.
+5. **기록**
    - Agent 저장소 `logs/<UTC-timestamp>.json` 에 사이클 결과를 커밋합니다.
    - **System 저장소**(`dh914/System`) 에 사이클 요약 이슈(`email-routine`, `audit` 라벨)를 생성하여 단일 감사 추적점을 유지합니다.
 
