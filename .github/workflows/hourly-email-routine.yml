@@ -1,6 +1,8 @@
 name: Hourly Email Routine
 
 on:
+  schedule:
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -20,7 +22,7 @@ jobs:
       - name: Checkout Data repo
         uses: actions/checkout@v4
         with:
-          repository: dh914/Data
+          repository: dh-operator/Data
           path: data
           token: ${{ secrets.CROSS_REPO_TOKEN }}
         continue-on-error: true
@@ -28,7 +30,7 @@ jobs:
       - name: Checkout System repo
         uses: actions/checkout@v4
         with:
-          repository: dh914/System
+          repository: dh-operator/System
           path: system
           token: ${{ secrets.CROSS_REPO_TOKEN }}
         continue-on-error: true
@@ -53,9 +55,9 @@ jobs:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          AGENT_REPO: dh914/Agent
-          DATA_REPO: dh914/Data
-          SYSTEM_REPO: dh914/System
+          AGENT_REPO: dh-operator/Agent
+          DATA_REPO: dh-operator/Data
+          SYSTEM_REPO: dh-operator/System
           GITHUB_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
         run: python scripts/email_routine.py
 
@@ -64,7 +66,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Always rebase to avoid races between concurrent hourly runs.
           git pull --rebase origin main || true
           if [ -n "$(git status --porcelain logs/)" ]; then
             git add logs/
