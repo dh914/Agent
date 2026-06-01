@@ -46,6 +46,24 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+      - name: Debug - check secrets and network
+        working-directory: agent
+        env:
+          IMAP_HOST: ${{ secrets.IMAP_HOST }}
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+        run: |
+          echo "=== 환경 확인 ==="
+          echo "IMAP_HOST 설정 여부: $([ -n "$IMAP_HOST" ] && echo YES || echo NO)"
+          echo "IMAP_USER 설정 여부: $([ -n "$IMAP_USER" ] && echo YES || echo NO)"
+          echo "Python 버전: $(python3 --version)"
+          echo "=== 네트워크 테스트 ==="
+          nc -zv imap.mail.me.com 993 2>&1 || echo "IMAP 993 접근 불가"
+          nc -zv smtp.mail.me.com 587 2>&1 || echo "SMTP 587 접근 불가"
+          nc -zv smtp.mail.me.com 465 2>&1 || echo "SMTP 465 접근 불가"
+          echo "=== 스크립트 파일 확인 ==="
+          ls -la scripts/
+          echo "=== 완료 ==="
+
       - name: Run email routine
         working-directory: agent
         env:
