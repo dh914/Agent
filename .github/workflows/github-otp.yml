@@ -1,0 +1,52 @@
+name: Fetch GitHub OTP
+
+# Manual-only: never schedule. A scheduled run would log codes to a public
+# place even when masked. The job is gated to the repo owner.
+on:
+  workflow_dispatch:
+    inputs:
+      lookback:
+        description: 'How many recent messages to scan'
+        required: false
+        default: '25'
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch latest GitHub verification email
+        id: otp
+        env:
+          IMAP_HOST: ${{ secrets.IMAP_HOST }}
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASS: ${{ secrets.IMAP_PASS }}
+        run: |
+          python scripts/github_otp.py --mask --lookback "${{ inputs.lookback }}"
+
+      - name: Write masked summary
+        if: always()
+        run: |
+          {
+            echo "### GitHub OTP fetch"
+            echo ""
+            if [ -n "${{ steps.otp.outputs.code }}" ]; then
+              echo "- code captured: yes (length ${#GITHUB_CODE})"
+            else
+              echo "- code captured: no"
+            fi
+            if [ -n "${{ steps.otp.outputs.device_link }}" ]; then
+              echo "- device link: present"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GITHUB_CODE: ${{ steps.otp.outputs.code }}
