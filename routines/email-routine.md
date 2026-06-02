@@ -37,3 +37,30 @@ GitHub UI 의 **Actions → Hourly Email Routine → Run workflow** 또는
 ```
 gh workflow run "Hourly Email Routine" -R dh914/Agent
 ```
+
+## GitHub OTP 자동 추출 (수동 트리거)
+
+GitHub 인증 메일에서 6–8자리 코드 또는 디바이스 인증 링크를 꺼내오는
+별도 워크플로우입니다. **스케줄러 없이 `workflow_dispatch` 만** 허용하며,
+실행자(`github.actor`)가 저장소 소유자와 일치할 때만 동작합니다.
+
+- 스크립트: `scripts/github_otp.py`
+- 워크플로우: `.github/workflows/github-otp.yml`
+- 실행: **Actions → Fetch GitHub OTP → Run workflow**
+
+코드는 step output(`steps.otp.outputs.code`)으로만 전달되며 로그에는
+마스킹된 값(`4****3`)만 남습니다. 후속 단계에서 GitHub API 호출이나
+Playwright 입력에 사용할 수 있도록 step output 으로 노출합니다.
+
+### iCloud 앱 암호 발급 (한 번만)
+
+1. https://account.apple.com → **로그인 및 보안 → 앱 암호**
+2. 새 앱 암호 생성(라벨 예: `agent-imap`)
+3. 표시되는 16자리 암호를 GitHub Secret 으로 등록:
+   - `IMAP_HOST` = `imap.mail.me.com`
+   - `IMAP_USER` = `<Apple ID>@icloud.com`
+   - `IMAP_PASS` = 발급받은 앱 암호 (공백 포함 그대로)
+
+앱 암호는 IMAP 전용으로 별도 발급되며, 분실/유출 시 같은 화면에서
+즉시 폐기할 수 있습니다. 절대로 코드, 커밋, 이슈, 로그에 평문으로
+남기지 마세요.
